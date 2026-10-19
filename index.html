@@ -545,7 +545,7 @@ houses.forEach(o=>{
   const dp=new THREE.Group();dp.position.set(-DW/2,0,hd-T/2);g.add(dp);
   const dm=new THREE.Mesh(new THREE.BoxGeometry(DW,DH,.1),new THREE.MeshLambertMaterial({color:0x5a3520}));dm.position.set(DW/2,DH/2,0);dm.castShadow=true;dp.add(dm);occ.push(dm);
   const kn=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.2),new THREE.MeshLambertMaterial({color:0xd6b04a}));kn.position.set(DW-.15,DH/2-.1,0);dp.add(kn);
-  o.door={pivot:dp,open:false,ang:0,seg:{x0:o.x-DW/2,x1:o.x+DW/2,z0:o.z+hd-T,z1:o.z+hd}};
+  o.door={pivot:dp,open:false,ang:0,hp:100,seg:{x0:o.x-DW/2,x1:o.x+DW/2,z0:o.z+hd-T,z1:o.z+hd}};
   o.g=g;g.position.set(o.x,0,o.z);scene.add(g);
 });
 const chests=[];
@@ -1167,7 +1167,7 @@ const houseOf=(x,z)=>houses.find(o=>Math.abs(x-o.x)<o.hw&&Math.abs(z-o.z)<o.hd)|
 function useDoor(){if(shopOpen){shopToggle();return}if(MER&&Math.hypot(P.x-MER.x,P.z-MER.z)<4){shopToggle();return}const nc=chests.find(c=>Math.hypot(P.x-c.x,P.z-c.z)<2.2);if(nc){openChest(nc);return}let b=null,bd=3;for(const o of houses){const d=Math.hypot(P.x-o.x,P.z-(o.z+o.hd));if(d<bd){bd=d;b=o}}
   if(!b)return;
   if(b.door.open){const q=b.door.seg;if(P.x>q.x0-.6&&P.x<q.x1+.6&&P.z>q.z0-.6&&P.z<q.z1+.6){msg('Step away from the doorway first');return}}
-  b.door.open=!b.door.open;msg(b.door.open?'Door open':'Door closed')}
+  b.door.open=!b.door.open;if(!b.door.open)b.door.hp=100;msg(b.door.open?'Door open':'Door closed')}
 $('use').addEventListener('touchstart',e=>{e.preventDefault();useDoor()});$('invb').addEventListener('touchstart',e=>{e.preventDefault();invToggle()});$('jmp').addEventListener('touchstart',e=>{e.preventDefault();jumpReq=true});$('aimb').addEventListener('touchstart',e=>{e.preventDefault();aimH=!aimH});
 function wallSpot(){const fx=-Math.sin(yaw),fz=-Math.cos(yaw);return{x:Math.round((P.x+fx*3.4)*2)/2,z:Math.round((P.z+fz*3.4)*2)/2,ax:Math.abs(fz)>Math.abs(fx)}}
 let WM=null;
@@ -1367,7 +1367,10 @@ function build(){
   pw.push({x0:s.x-hx,x1:s.x+hx,z0:s.z-hz,z1:s.z+hz,hp:st?400:100,mesh:m});if(st)P.stone-=3;else P.wood-=2;swing=1;cd=.35;snd(st?110:160,.1,.2);
 }
 function chew(z,dt){for(const q of pw)if(z.position.x>q.x0-1&&z.position.x<q.x1+1&&z.position.z>q.z0-1&&z.position.z<q.z1+1){q.hp-=dt*(8+ZD);
-  if(q.hp<=0){scene.remove(q.mesh);occ.splice(occ.indexOf(q.mesh),1);pw.splice(pw.indexOf(q),1);msg('A wall was destroyed')}break}}
+  if(q.hp<=0){scene.remove(q.mesh);occ.splice(occ.indexOf(q.mesh),1);pw.splice(pw.indexOf(q),1);msg('A wall was destroyed')}break}
+  // Zombie door-break AI
+  for(const o of houses){const dr=o.door;if(dr.open)continue;const seg=dr.seg;const cx=(seg.x0+seg.x1)/2,cz=(seg.z0+seg.z1)/2;if(Math.hypot(z.position.x-cx,z.position.z-cz)<2.2){dr.hp-=dt*10;if(dr.hp<=0){dr.open=true;dr.hp=0;msg('A zombie broke down the door!');snd(120,.35,.35)}else if(Math.floor(dr.hp*10)%15===0){snd(180+Math.random()*40,.08,.18)}break}}
+}
 function act(){
   if(over||!playing||cd>0)return;
   if(slot===6){minePick();return}if(slot===5){fireBazooka();return}if(slot===0||slot===4){shoot();return}
