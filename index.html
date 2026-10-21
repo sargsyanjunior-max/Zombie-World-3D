@@ -1511,8 +1511,24 @@ function update(dt){
   else{slide.position.z=Math.max(kick*.05,P.ammo<=0?.034:0);gun.position.z=-.45+.05*ads+kick*.08*(1-.5*ads);gun.position.y=-.2+.092*ads-down*.3+(l>.05?Math.abs(Math.sin(bobT))*.012*(1-ads):0);gun.position.x=.22*(1-ads)+(Math.sin(bobT*.5)*.012*(l>.05?1:.25)+Math.sin(GT*1.3)*.002)*(1-.7*ads);gun.rotation.x=kick*.12*(1-.4*ads)+swP*(1-.6*ads);gun.rotation.y=swY*(1-.6*ads);gun.rotation.z=0}
   for(const z of zs){
     const dx=P.x-z.position.x,dz=P.z-z.position.z,d=Math.hypot(dx,dz);
-    z.rotation.y=Math.atan2(dx,dz);
-    const aw=(z.ty===6||alertT>0||d<26||(run&&d<48))?1:.7,sf=(z.stg>0?(z.stg-=dt,.12):1)*aw;if(d>45){z.position.x+=dx/d*z.spd*sf*dt;z.position.z+=dz/d*z.spd*sf*dt}else if(d>(z.ty===6?3.4:1.3)){const v=z.spd*sf*dt,nx=z.position.x+dx/d*v,nz=z.position.z+dz/d*v;
+    // Door-targeting AI: if player is inside a house, find that house's door and steer toward it
+    let tx=P.x,tz=P.z;
+    if(pHouse&&!pHouse.door.open){
+      const seg=pHouse.door.seg;
+      const dcx=(seg.x0+seg.x1)/2,dcz=(seg.z0+seg.z1)/2;
+      const ddist=Math.hypot(z.position.x-dcx,z.position.z-dcz);
+      // If zombie is outside the house, redirect it toward the door center
+      if(!houseOf(z.position.x,z.position.z)){
+        tx=dcx;tz=dcz;
+        // If zombie is very close to door, smash it
+        if(ddist<1.5){pHouse.door.hp-=dt*10;if(pHouse.door.hp<=0){pHouse.door.open=true;pHouse.door.hp=0;msg('A zombie broke down the door!');snd(120,.35,.35)}else if((Math.floor(GT*8)%4===0)){snd(160+Math.random()*60,.07,.16)}}
+      }
+    }
+    const tdx=tx-z.position.x,tdz=tz-z.position.z,td=Math.hypot(tdx,tdz);
+    if(td>0.01)z.rotation.y=Math.atan2(tdx,tdz);
+    const aw=(z.ty===6||alertT>0||d<26||(run&&d<48))?1:.7,sf=(z.stg>0?(z.stg-=dt,.12):1)*aw;
+    if(d>45){z.position.x+=dx/d*z.spd*sf*dt;z.position.z+=dz/d*z.spd*sf*dt}
+    else if(td>(z.ty===6?3.4:1.3)){const v=z.spd*sf*dt,nx=z.position.x+tdx/td*v,nz=z.position.z+tdz/td*v;
       if(!blocked(nx,nz,.4)){z.position.x=nx;z.position.z=nz}else if(!blocked(nx,z.position.z,.4))z.position.x=nx;else if(!blocked(z.position.x,nz,.4))z.position.z=nz;else chew(z,dt)}
     z.ph+=dt*z.spd*sf*3.2;const w=Math.sin(z.ph);if(z.legs){z.legs[0].rotation.x=w*.7;z.legs[1].rotation.x=-w*.7;z.arms[0].rotation.x=-1+w*.18;z.arms[1].rotation.x=-1-w*.18;zx(z,w)}
     z.cd-=dt;if(d<(z.ty===6?4:1.6)&&z.cd<=0&&houseOf(z.position.x,z.position.z)===pHouse){z.cd=z.ty===6?1.2:.9;hurt(z.dmg)}
